@@ -168,13 +168,7 @@ function batchedMountComponentIntoNode(
  * @see {ReactMount.unmountComponentAtNode}
  */
 function unmountComponentFromNode(instance, container, safely) {
-  if (__DEV__) {
-    ReactInstrumentation.debugTool.onBeginFlush();
-  }
   ReactReconciler.unmountComponent(instance, safely);
-  if (__DEV__) {
-    ReactInstrumentation.debugTool.onEndFlush();
-  }
 
   if (container.nodeType === DOC_NODE_TYPE) {
     container = container.documentElement;
@@ -275,9 +269,6 @@ var TopLevelWrapper = function() {
   this.rootID = topLevelRootCounter++;
 };
 TopLevelWrapper.prototype.isReactComponent = {};
-if (__DEV__) {
-  TopLevelWrapper.displayName = 'TopLevelWrapper';
-}
 TopLevelWrapper.prototype.render = function() {
   return this.props.child;
 };
@@ -415,6 +406,7 @@ var ReactMount = {
    * @param {?function} callback function triggered on completion
    * @return {ReactComponent} Component instance rendered in `container`.
    */
+  // scr: not used in production
   renderSubtreeIntoContainer: function(
     parentComponent,
     nextElement,
@@ -433,6 +425,7 @@ var ReactMount = {
     );
   },
 
+  // scr: critical path
   _renderSubtreeIntoContainer: function(
     parentComponent,
     nextElement,
@@ -509,32 +502,6 @@ var ReactMount = {
       reactRootElement && !!internalGetID(reactRootElement);
     var containerHasNonRootReactChild = hasNonRootReactChild(container);
 
-    if (__DEV__) {
-      warning(
-        !containerHasNonRootReactChild,
-        'render(...): Replacing React-rendered children with a new root ' +
-          'component. If you intended to update the children of this node, ' +
-          'you should instead have the existing children update their state ' +
-          'and render the new components instead of calling ReactDOM.render.',
-      );
-
-      if (!containerHasReactMarkup || reactRootElement.nextSibling) {
-        var rootElementSibling = reactRootElement;
-        while (rootElementSibling) {
-          if (internalGetID(rootElementSibling)) {
-            warning(
-              false,
-              'render(): Target node has markup rendered by React, but there ' +
-                'are unrelated nodes as well. This is most commonly caused by ' +
-                'white-space inserted around server-rendered markup.',
-            );
-            break;
-          }
-          rootElementSibling = rootElementSibling.nextSibling;
-        }
-      }
-    }
-
     var shouldReuseMarkup =
       containerHasReactMarkup &&
       !prevComponent &&
@@ -564,6 +531,7 @@ var ReactMount = {
    * @param {?function} callback function triggered on completion
    * @return {ReactComponent} Component instance rendered in `container`.
    */
+  // scr: critical path
   render: function(nextElement, container, callback) {
     return ReactMount._renderSubtreeIntoContainer(
       null,
@@ -601,14 +569,6 @@ var ReactMount = {
       'unmountComponentAtNode(...): Target container is not a DOM element.',
     );
 
-    if (__DEV__) {
-      warning(
-        !nodeIsRenderedByOtherInstance(container),
-        "unmountComponentAtNode(): The node you're attempting to unmount " +
-          'was rendered by another copy of React.',
-      );
-    }
-
     var prevComponent = getTopLevelWrapperInContainer(container);
     if (!prevComponent) {
       // Check if the node being unmounted was rendered by React, but isn't a
@@ -618,19 +578,6 @@ var ReactMount = {
       // Check if the container itself is a React root node.
       var isContainerReactRoot =
         container.nodeType === 1 && container.hasAttribute(ROOT_ATTR_NAME);
-
-      if (__DEV__) {
-        warning(
-          !containerHasNonRootReactChild,
-          "unmountComponentAtNode(): The node you're attempting to unmount " +
-            'was rendered by React and is not a top-level container. %s',
-          isContainerReactRoot
-            ? 'You may have accidentally passed in a React root node instead ' +
-                'of its container.'
-            : 'Instead, have the parent component update its state and ' +
-                'rerender in order to remove this component.',
-        );
-      }
 
       return false;
     }
@@ -674,25 +621,6 @@ var ReactMount = {
         );
 
         var normalizedMarkup = markup;
-        if (__DEV__) {
-          // because rootMarkup is retrieved from the DOM, various normalizations
-          // will have occurred which will not be present in `markup`. Here,
-          // insert markup into a <div> or <iframe> depending on the container
-          // type to perform the same normalizations before comparing.
-          var normalizer;
-          if (container.nodeType === ELEMENT_NODE_TYPE) {
-            normalizer = document.createElement('div');
-            normalizer.innerHTML = markup;
-            normalizedMarkup = normalizer.innerHTML;
-          } else {
-            normalizer = document.createElement('iframe');
-            document.body.appendChild(normalizer);
-            normalizer.contentDocument.write(markup);
-            normalizedMarkup =
-              normalizer.contentDocument.documentElement.outerHTML;
-            document.body.removeChild(normalizer);
-          }
-        }
 
         var diffIndex = firstDifferenceIndex(normalizedMarkup, rootMarkup);
         var difference =
@@ -713,21 +641,6 @@ var ReactMount = {
             'and ensure the props are the same client and server side:\n%s',
           difference,
         );
-
-        if (__DEV__) {
-          warning(
-            false,
-            'React attempted to reuse markup in a container but the ' +
-              'checksum was invalid. This generally means that you are ' +
-              'using server rendering and the markup generated on the ' +
-              'server was not what the client was expecting. React injected ' +
-              'new markup to compensate which works but you have lost many ' +
-              'of the benefits of server rendering. Instead, figure out ' +
-              'why the markup being generated is different on the client ' +
-              'or server:\n%s',
-            difference,
-          );
-        }
       }
     }
 
@@ -747,19 +660,6 @@ var ReactMount = {
     } else {
       setInnerHTML(container, markup);
       ReactDOMComponentTree.precacheNode(instance, container.firstChild);
-    }
-
-    if (__DEV__) {
-      var hostNode = ReactDOMComponentTree.getInstanceFromNode(
-        container.firstChild,
-      );
-      if (hostNode._debugID !== 0) {
-        ReactInstrumentation.debugTool.onHostOperation({
-          instanceID: hostNode._debugID,
-          type: 'mount',
-          payload: markup.toString(),
-        });
-      }
     }
   },
 };
