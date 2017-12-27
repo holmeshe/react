@@ -27,26 +27,10 @@ var RESERVED_PROPS = {
 var specialPropKeyWarningShown, specialPropRefWarningShown;
 
 function hasValidRef(config) {
-  if (__DEV__) {
-    if (hasOwnProperty.call(config, 'ref')) {
-      var getter = Object.getOwnPropertyDescriptor(config, 'ref').get;
-      if (getter && getter.isReactWarning) {
-        return false;
-      }
-    }
-  }
   return config.ref !== undefined;
 }
 
 function hasValidKey(config) {
-  if (__DEV__) {
-    if (hasOwnProperty.call(config, 'key')) {
-      var getter = Object.getOwnPropertyDescriptor(config, 'key').get;
-      if (getter && getter.isReactWarning) {
-        return false;
-      }
-    }
-  }
   return config.key !== undefined;
 }
 
@@ -127,50 +111,6 @@ var ReactElement = function(type, key, ref, self, source, owner, props) {
     _owner: owner,
   };
 
-  if (__DEV__) {
-    // The validation flag is currently mutative. We put it on
-    // an external backing store so that we can freeze the whole object.
-    // This can be replaced with a WeakMap once they are implemented in
-    // commonly used development environments.
-    element._store = {};
-
-    // To make comparing ReactElements easier for testing purposes, we make
-    // the validation flag non-enumerable (where possible, which should
-    // include every environment we run tests in), so the test framework
-    // ignores it.
-    if (canDefineProperty) {
-      Object.defineProperty(element._store, 'validated', {
-        configurable: false,
-        enumerable: false,
-        writable: true,
-        value: false,
-      });
-      // self and source are DEV only properties.
-      Object.defineProperty(element, '_self', {
-        configurable: false,
-        enumerable: false,
-        writable: false,
-        value: self,
-      });
-      // Two elements created in two different places should be considered
-      // equal for testing purposes and therefore we hide it from enumeration.
-      Object.defineProperty(element, '_source', {
-        configurable: false,
-        enumerable: false,
-        writable: false,
-        value: source,
-      });
-    } else {
-      element._store.validated = false;
-      element._self = self;
-      element._source = source;
-    }
-    if (Object.freeze) {
-      Object.freeze(element.props);
-      Object.freeze(element);
-    }
-  }
-
   return element;
 };
 
@@ -178,6 +118,7 @@ var ReactElement = function(type, key, ref, self, source, owner, props) {
  * Create and return a new ReactElement of the given type.
  * See https://facebook.github.io/react/docs/top-level-api.html#react.createelement
  */
+// scr: critical path, before ReactDom.render()
 ReactElement.createElement = function(type, config, children) {
   var propName;
 
@@ -191,10 +132,10 @@ ReactElement.createElement = function(type, config, children) {
 
   if (config != null) {
     if (hasValidRef(config)) {
-      ref = config.ref;
+      ref = config.ref; // scr: TODO ref
     }
     if (hasValidKey(config)) {
-      key = '' + config.key;
+      key = '' + config.key; //scr: TODO key
     }
 
     self = config.__self === undefined ? null : config.__self;
@@ -214,18 +155,14 @@ ReactElement.createElement = function(type, config, children) {
   // the newly allocated props object.
   var childrenLength = arguments.length - 2;
   if (childrenLength === 1) {
-    props.children = children;
+    props.children = children; // scr: one child is stored as object
   } else if (childrenLength > 1) {
     var childArray = Array(childrenLength);
     for (var i = 0; i < childrenLength; i++) {
       childArray[i] = arguments[i + 2];
     }
-    if (__DEV__) {
-      if (Object.freeze) {
-        Object.freeze(childArray);
-      }
-    }
-    props.children = childArray;
+
+    props.children = childArray; // scr: multiple children are stored as array 
   }
 
   // Resolve default props
@@ -237,24 +174,7 @@ ReactElement.createElement = function(type, config, children) {
       }
     }
   }
-  if (__DEV__) {
-    if (key || ref) {
-      if (
-        typeof props.$$typeof === 'undefined' ||
-        props.$$typeof !== REACT_ELEMENT_TYPE
-      ) {
-        var displayName = typeof type === 'function'
-          ? type.displayName || type.name || 'Unknown'
-          : type;
-        if (key) {
-          defineKeyPropWarningGetter(props, displayName);
-        }
-        if (ref) {
-          defineRefPropWarningGetter(props, displayName);
-        }
-      }
-    }
-  }
+
   return ReactElement(
     type,
     key,

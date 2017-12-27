@@ -12,7 +12,7 @@
 var ReactBaseClasses = require('ReactBaseClasses');
 var ReactChildren = require('ReactChildren');
 var ReactDOMFactories = require('ReactDOMFactories');
-var ReactElement = require('ReactElement');
+var ReactElement = require('ReactElement');                 // scr: @isomorphic/classic/element/ReactElement.js
 var ReactPropTypes = require('ReactPropTypes');
 var ReactVersion = require('ReactVersion');
 

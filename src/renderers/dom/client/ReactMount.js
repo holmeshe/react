@@ -348,6 +348,7 @@ var ReactMount = {
    * @param {boolean} shouldReuseMarkup if we should skip the markup insertion
    * @return {ReactComponent} nextComponent
    */
+  // scr: critical path - ReactDom.render()
   _renderNewRootComponent: function(
     nextElement,
     container,
@@ -406,7 +407,7 @@ var ReactMount = {
    * @param {?function} callback function triggered on completion
    * @return {ReactComponent} Component instance rendered in `container`.
    */
-  // scr: not used in production
+  // scr: not commonly used, from - ReactDOM.unstable_renderSubtreeIntoContainer()
   renderSubtreeIntoContainer: function(
     parentComponent,
     nextElement,
@@ -425,11 +426,12 @@ var ReactMount = {
     );
   },
 
-  // scr: critical path
+  // scr: critical path - ReactDom.render()
+  // scr: also from - ReactDOM.unstable_renderSubtreeIntoContainer()
   _renderSubtreeIntoContainer: function(
-    parentComponent,
-    nextElement,
-    container,
+    parentComponent,                      // scr: null from ReactDom.render()
+    nextElement,                          // scr: <App /> @ index.js
+    container,                            // scr: document.getElementById('root') @ index.js
     callback,
   ) {
     ReactUpdateQueue.validateCallback(callback, 'ReactDOM.render');
@@ -468,12 +470,13 @@ var ReactMount = {
     if (parentComponent) {
       var parentInst = ReactInstanceMap.get(parentComponent);
       nextContext = parentInst._processChildContext(parentInst._context);
-    } else {
+    } else { // scr: parentComponent is null from ReactDom.render()
       nextContext = emptyObject;
     }
 
     var prevComponent = getTopLevelWrapperInContainer(container);
 
+    // scr: prevComponent is null from ReactDom.render()
     if (prevComponent) {
       var prevWrappedElement = prevComponent._currentElement;
       var prevElement = prevWrappedElement.props.child;
@@ -507,10 +510,10 @@ var ReactMount = {
       !prevComponent &&
       !containerHasNonRootReactChild;
     var component = ReactMount._renderNewRootComponent(
-      nextWrappedElement,
-      container,
-      shouldReuseMarkup,
-      nextContext,
+      nextWrappedElement,                   // scr:
+      container,                            // scr: <App /> @ index.js
+      shouldReuseMarkup,                    // scr: null from ReactDom.render()
+      nextContext,                          // scr: emptyObject from ReactDom.render()
     )._renderedComponent.getPublicInstance();
     if (callback) {
       callback.call(component);
@@ -531,7 +534,7 @@ var ReactMount = {
    * @param {?function} callback function triggered on completion
    * @return {ReactComponent} Component instance rendered in `container`.
    */
-  // scr: critical path
+  // scr: critical path - ReactDom.render()
   render: function(nextElement, container, callback) {
     return ReactMount._renderSubtreeIntoContainer(
       null,

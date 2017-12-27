@@ -66,18 +66,7 @@ function instantiateReactComponent(node, shouldHaveDebugID) {
     var type = element.type;
     if (typeof type !== 'function' && typeof type !== 'string') {
       var info = '';
-      if (__DEV__) {
-        if (
-          type === undefined ||
-          (typeof type === 'object' &&
-            type !== null &&
-            Object.keys(type).length === 0)
-        ) {
-          info +=
-            ' You likely forgot to export your component from the file ' +
-            "it's defined in.";
-        }
-      }
+
       info += getDeclarationErrorAddendum(element._owner);
       invariant(
         false,
@@ -110,33 +99,14 @@ function instantiateReactComponent(node, shouldHaveDebugID) {
     invariant(false, 'Encountered invalid React node of type %s', typeof node);
   }
 
-  if (__DEV__) {
-    warning(
-      typeof instance.mountComponent === 'function' &&
-        typeof instance.receiveComponent === 'function' &&
-        typeof instance.getHostNode === 'function' &&
-        typeof instance.unmountComponent === 'function',
-      'Only React Components can be mounted.',
-    );
-  }
-
   // These two fields are used by the DOM and ART diffing algorithms
   // respectively. Instead of using expandos on components, we should be
   // storing the state needed by the diffing algorithms elsewhere.
   instance._mountIndex = 0;
   instance._mountImage = null;
 
-  if (__DEV__) {
-    instance._debugID = shouldHaveDebugID ? getNextDebugID() : 0;
-  }
-
   // Internal instances should fully constructed at this point, so they should
   // not get any new fields added to them at this point.
-  if (__DEV__) {
-    if (Object.preventExtensions) {
-      Object.preventExtensions(instance);
-    }
-  }
 
   return instance;
 }
