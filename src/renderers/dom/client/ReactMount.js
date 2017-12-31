@@ -139,8 +139,8 @@ function mountComponentIntoNode(
 function batchedMountComponentIntoNode(
   componentInstance,
   container,
-  shouldReuseMarkup,
-  context,
+  shouldReuseMarkup, // scr: null from ReactDom.render()
+  context, // scr: emptyObject from ReactDom.render()
 ) {
   var transaction = ReactUpdates.ReactReconcileTransaction.getPooled(
     /* useCreateElement */
@@ -270,6 +270,8 @@ var TopLevelWrapper = function() {
 };
 TopLevelWrapper.prototype.isReactComponent = {};
 TopLevelWrapper.prototype.render = function() {
+// scr: this function will be used to strip the wrapper in the rendering process
+
   return this.props.child;
 };
 TopLevelWrapper.isReactTopLevelWrapper = true;
@@ -352,8 +354,8 @@ var ReactMount = {
   _renderNewRootComponent: function(
     nextElement,
     container,
-    shouldReuseMarkup,
-    context,
+    shouldReuseMarkup, // scr: null from ReactDom.render()
+    context, // emptyObject from ReactDom.render()
   ) {
     // Various parts of our code (such as ReactCompositeComponent's
     // _renderValidatedComponent) assume that calls to render aren't nested;
@@ -467,7 +469,7 @@ var ReactMount = {
     });
 
     var nextContext;
-    if (parentComponent) {
+    if (parentComponent) { // scr: parentComponent is null from ReactDom.render(), so skip
       var parentInst = ReactInstanceMap.get(parentComponent);
       nextContext = parentInst._processChildContext(parentInst._context);
     } else { // scr: parentComponent is null from ReactDom.render()
@@ -476,7 +478,7 @@ var ReactMount = {
 
     var prevComponent = getTopLevelWrapperInContainer(container);
 
-    // scr: prevComponent is null from ReactDom.render()
+    // scr: prevComponent is null from ReactDom.render(), so skip
     if (prevComponent) {
       var prevWrappedElement = prevComponent._currentElement;
       var prevElement = prevWrappedElement.props.child;
@@ -510,8 +512,8 @@ var ReactMount = {
       !prevComponent &&
       !containerHasNonRootReactChild;
     var component = ReactMount._renderNewRootComponent(
-      nextWrappedElement,                   // scr:
-      container,                            // scr: <App /> @ index.js
+      nextWrappedElement,
+      container,
       shouldReuseMarkup,                    // scr: null from ReactDom.render()
       nextContext,                          // scr: emptyObject from ReactDom.render()
     )._renderedComponent.getPublicInstance();
